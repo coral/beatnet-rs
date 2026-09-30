@@ -1,0 +1,34 @@
+[package]
+name = "beatnet-rs"
+version = "0.1.0"
+edition = "2024"
+description = "Synchronous streaming BeatNet beat and downbeat tracking"
+license = "CC-BY-4.0"
+
+[features]
+default = ["bundled-runtime"]
+bundled-runtime = ["ort/download-binaries", "ort/tls-native", "ort/copy-dylibs"]
+dynamic-runtime = ["ort/load-dynamic"]
+live = ["dep:cpal"]
+
+[dependencies]
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "api-27"] }
+realfft = "3.5"
+rubato = "5.0"
+audioadapter-buffers = "5.2"
+rtrb = "0.4"
+rand = "0.9"
+rand_chacha = "0.9"
+thiserror = "2"
+cpal = { version = "0.18.2", optional = true }
+
+[dev-dependencies]
+ctrlc = "3.5"
+
+[[example]]
+name = "live"
+required-features = ["live"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

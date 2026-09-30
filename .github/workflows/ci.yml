@@ -1,0 +1,21 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config libssl-dev
+      - run: cargo fmt --check
+      - run: cargo clippy --locked --features live --all-targets -- -D warnings
+      - run: cargo test --locked --features live
+      - run: cargo check --locked --no-default-features --features dynamic-runtime,live --all-targets
+      - run: cargo run --locked --release --example benchmark -- 1000

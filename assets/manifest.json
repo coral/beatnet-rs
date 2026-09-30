@@ -1,0 +1,52 @@
+{
+  "upstream_commit": "81cedd4beeb7235262db80969a0c9ce9a48a0ed4",
+  "sample_rate": 22050,
+  "hop": 441,
+  "window": 1411,
+  "filterbank_shape": [
+    705,
+    136
+  ],
+  "fixtures": {
+    "silence": {
+      "samples": 88200,
+      "frames": 200
+    },
+    "impulse": {
+      "samples": 88200,
+      "frames": 200
+    },
+    "tone": {
+      "samples": 88200,
+      "frames": 200
+    },
+    "noise": {
+      "samples": 88200,
+      "frames": 200
+    },
+    "rhythm": {
+      "samples": 88200,
+      "frames": 200
+    }
+  },
+  "models": [
+    {
+      "number": 1,
+      "source_sha256": "619091bc317ca3e83b45591d46f6de3d5a41588bcb39fe9fe7be30cffa6aca84",
+      "onnx_sha256": "1031107214f412ad90070660fb7f0d2dbecf5724f072c29282c830b9fcc0ffab",
+      "max_export_error": 1.71661376953125e-05
+    },
+    {
+      "number": 2,
+      "source_sha256": "5878a18c079fa0b0139879b14ed2b5b7595faef8c3d16210aed141fd00fa2d58",
+      "onnx_sha256": "767d123217abffa8d5a864c3062500666864c1ff41c08b9a283f8ac532e73319",
+      "max_export_error": 3.4332275390625e-05
+    },
+    {
+      "number": 3,
+      "source_sha256": "0c52a074ea38e8cb4a760ecfa3747c9cf91a1e3cd19f238eed80b0de763989ca",
+      "onnx_sha256": "6aa9e2de8fd258ba18d01be4de6dbcf5ec684cf34d16d41ab50f72455bd946c8",
+      "max_export_error": 1.9073486328125e-05
+    }
+  ]
+}
