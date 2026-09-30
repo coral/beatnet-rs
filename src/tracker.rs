@@ -3,7 +3,7 @@ use crate::{BeatEvent, Error, TrackingState, features::FRAME_RATE, validate_prob
 
 const SECONDS_PER_FRAME: f64 = 1.0 / FRAME_RATE as f64;
 const TEMPO_SCALE: f64 = 60.0 * FRAME_RATE as f64;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
 #[derive(Clone, Debug)]

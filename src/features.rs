@@ -183,7 +183,7 @@ fn magnitudes<S: Simd>(simd: S, spectrum: &[Complex<f64>], output: &mut [f32]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, SeedableRng};
+    use rand::{RngExt, SeedableRng};
     use rand_chacha::ChaCha8Rng;
 
     #[test]

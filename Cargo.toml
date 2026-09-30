@@ -4,6 +4,22 @@ version = "0.1.0"
 edition = "2024"
 description = "Synchronous streaming BeatNet beat and downbeat tracking"
 license = "CC-BY-4.0"
+repository = "https://github.com/coral/beatnet-rs"
+documentation = "https://docs.rs/beatnet-rs"
+keywords = ["audio", "beat-tracking", "tempo", "rhythm", "dsp"]
+categories = ["multimedia::audio", "algorithms"]
+include = [
+    "src/**",
+    "tests/**",
+    "examples/**",
+    "models/**",
+    "assets/**",
+    "tools/**",
+    "Cargo.toml",
+    "Cargo.lock",
+    "README.md",
+    "LICENSE",
+]
 
 [features]
 default = ["bundled-runtime"]
@@ -17,8 +33,8 @@ realfft = "3.5"
 rubato = "5.0"
 audioadapter-buffers = "5.2"
 rtrb = "0.4"
-rand = "0.9"
-rand_chacha = "0.9"
+rand = "0.10.3"
+rand_chacha = "0.10"
 thiserror = "2"
 cpal = { version = "0.18.2", optional = true }
 fearless_simd = "1.0"
