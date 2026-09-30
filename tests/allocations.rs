@@ -39,16 +39,20 @@ impl Inference for Model {
 }
 #[test]
 fn callback_dsp_resampler_tracker_are_allocation_free() {
-    for rate in [22050, 22051, 44100, 48000] {
+    for (rate, channels) in [22050, 22051, 44100, 48000]
+        .into_iter()
+        .flat_map(|rate| [1, 2, 64].map(|channels| (rate, channels)))
+    {
         let mut net = BeatNet::with_model(
             BeatNetConfig {
                 sample_rate: rate,
+                channels,
                 ..Default::default()
             },
             Model,
         )
         .unwrap();
-        let (mut producer, mut consumer, stats) = transport::audio_queue(rate, 1).unwrap();
+        let (mut producer, mut consumer, stats) = transport::audio_queue(rate, channels).unwrap();
         let (mut outputs, mut output) = transport::output_queue(stats);
         let data = [0.1f32; 1024];
         net.process(&data, |_| {}).unwrap();
@@ -62,9 +66,9 @@ fn callback_dsp_resampler_tracker_are_allocation_free() {
             while output.pop().is_some() {}
         }
         net.discontinuity(100000);
-        net.process(&[0.1], |_| {}).unwrap();
+        net.process(&data[..usize::from(channels)], |_| {}).unwrap();
         net.finish(|_| {}).unwrap();
         ENABLED.set(false);
-        assert_eq!(COUNT.get(), 0, "sample rate {rate}");
+        assert_eq!(COUNT.get(), 0, "sample rate {rate}, channels {channels}");
     }
 }

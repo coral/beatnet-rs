@@ -11,6 +11,7 @@ pub(crate) struct RateConverter {
     input: Vec<f32>,
     output: Vec<f32>,
     used: usize,
+    needed: usize,
     skip: usize,
 }
 impl RateConverter {
@@ -45,6 +46,7 @@ impl RateConverter {
         Ok(Self {
             input: vec![0.; resampler.input_frames_max()],
             output: vec![0.; resampler.output_frames_max()],
+            needed: resampler.input_frames_next(),
             resampler,
             used: 0,
             skip,
@@ -53,19 +55,25 @@ impl RateConverter {
     pub(crate) fn reset(&mut self) {
         self.resampler.reset();
         self.used = 0;
+        self.needed = self.resampler.input_frames_next();
         self.skip = self.resampler.output_delay();
         self.input.fill(0.);
         self.output.fill(0.);
     }
-    pub(crate) fn push<M: Inference>(
+    pub(crate) fn process<M: Inference>(
         &mut self,
-        sample: f32,
+        mut samples: &[f32],
         engine: &mut Engine<M>,
         emit: &mut impl FnMut(FrameOutput),
     ) -> Result<(), Error> {
-        self.input[self.used] = sample;
-        self.used += 1;
-        while self.used == self.resampler.input_frames_next() {
+        while !samples.is_empty() || self.used == self.needed {
+            let count = samples.len().min(self.needed - self.used);
+            self.input[self.used..self.used + count].copy_from_slice(&samples[..count]);
+            self.used += count;
+            samples = &samples[count..];
+            if self.used < self.needed {
+                break;
+            }
             let input = InterleavedSlice::new(&self.input, 1, self.used).expect("allocated input");
             let len = self.output.len();
             let mut output =
@@ -74,12 +82,12 @@ impl RateConverter {
                 .resampler
                 .process_into_buffer(&input, &mut output, None)?;
             self.used = 0;
-            for &value in &self.output[..produced] {
-                if self.skip > 0 {
-                    self.skip -= 1;
-                } else {
-                    engine.push(value, emit)?;
-                }
+            // Rubato may change the input requirement after each output block.
+            self.needed = self.resampler.input_frames_next();
+            let skip = self.skip.min(produced);
+            self.skip -= skip;
+            for &value in &self.output[skip..produced] {
+                engine.push(value, emit)?;
             }
         }
         Ok(())

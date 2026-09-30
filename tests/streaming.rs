@@ -42,7 +42,7 @@ fn run(rate: u32, channels: u16, chunk: usize) -> Vec<FrameOutput> {
 }
 #[test]
 fn arbitrary_chunks_and_rates() {
-    for rate in [22050, 44100, 48000] {
+    for rate in [22050, 22051, 44100, 48000] {
         for channels in [1, 2] {
             let expected = run(rate, channels, 4096);
             for chunk in [1, 137, 441, 1023] {
@@ -50,6 +50,55 @@ fn arbitrary_chunks_and_rates() {
                     expected,
                     run(rate, channels, chunk),
                     "{rate} {channels} {chunk}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn batched_downmix_matches_mono_with_partial_channel_frames() {
+    for rate in [22050, 22051, 48000] {
+        for channels in [2, 3, 64] {
+            let pcm: Vec<f32> = (0..rate as usize / 5 * channels)
+                .map(|i| (i as f32 * 0.031).sin() * 0.7)
+                .collect();
+            let mono: Vec<f32> = pcm
+                .chunks_exact(channels)
+                .map(|frame| {
+                    (frame.iter().map(|&x| f64::from(x)).sum::<f64>() / channels as f64) as f32
+                })
+                .collect();
+            let mut reference = BeatNet::with_model(
+                BeatNetConfig {
+                    sample_rate: rate,
+                    ..Default::default()
+                },
+                TestModel,
+            )
+            .unwrap();
+            let mut expected = Vec::new();
+            reference.process(&mono, |f| expected.push(f)).unwrap();
+            reference.finish(|f| expected.push(f)).unwrap();
+            let mut net = BeatNet::with_model(
+                BeatNetConfig {
+                    sample_rate: rate,
+                    channels: channels as u16,
+                    ..Default::default()
+                },
+                TestModel,
+            )
+            .unwrap();
+            for chunk in [1, 137, 441 * channels - 1, 441 * channels + 1, pcm.len()] {
+                net.reset();
+                let mut actual = Vec::new();
+                for block in pcm.chunks(chunk) {
+                    net.process(block, |f| actual.push(f)).unwrap();
+                }
+                net.finish(|f| actual.push(f)).unwrap();
+                assert_eq!(
+                    actual, expected,
+                    "{rate} Hz, {channels} channels, chunk {chunk}"
                 );
             }
         }

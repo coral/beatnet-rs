@@ -72,6 +72,11 @@ hops. State updates every 20 ms. Timestamps refer to **source audio time**;
 delivery adds roughly 32 ms of window lookahead plus resampler, device, and queue
 latency. Resampler startup delay is removed from the audio timeline.
 
+Spectrum magnitudes use `fearless_simd` with runtime CPU selection on x86-64
+and NEON on ARM64. CPU detection happens at construction; processing needs no
+nightly Rust, async runtime, or additional allocations. FFTs and resampling
+retain RustFFT's and Rubato's SIMD implementations.
+
 `BeatEvent` contains time, BPM, downbeat, and confidence. `TrackingState` adds
 beat phase `[0, 1)`, meter, and `[beat, downbeat, non-beat]` probabilities. Tempo,
 phase, and meter are absent until the first accepted beat. Confidence measures
@@ -119,15 +124,27 @@ after gaps. Training, offline DBN decoding, and future-beat scheduling are exclu
 
 ```sh
 cargo test --locked --features live
+cargo test --locked --release --features live
 cargo clippy --locked --features live --all-targets -- -D warnings
 cargo run --locked --release --example benchmark -- 3000
 ```
 
-Tests cover numerical parity, streaming/timing, failure recovery, tracker behavior,
-overflow, and allocation guarantees. CI targets Linux and macOS. The latest local
-Linux run on an AMD Ryzen AI MAX+ 395 measured pipeline p99 at 0.053–0.060 ms per
-20 ms hop, with no drops in a 10-second paced queue test. These are processing
-measurements, not latency bounds. macOS and physical capture remain unverified locally.
+Tests cover numerical parity, SIMD backends and numeric extremes, streaming/timing,
+failure recovery, tracker behavior, overflow, and allocation guarantees.
+Local before/after runs on an AMD Ryzen AI MAX+ 395 measured median processing:
+
+| Input rate | Before | Optimized |
+| --- | --- | --- |
+| 22,050 Hz | 45 µs | 43 µs |
+| 44,100 Hz | 49 µs | 47 µs |
+| 48,000 Hz | 49 µs | 45 µs |
+
+Each run processed 10,000 mono hops with model 1 on stable Rust, without
+`target-cpu=native`. Optimized pipeline p99 was 54–57 µs per 20 ms hop, with no
+drops in the 10-second paced queue test. These are local processing measurements,
+not latency bounds; CPU frequency and scheduling affect results. ARM64 was
+cross-checked with Clippy; native ARM64 performance, macOS, and physical capture
+remain unverified locally.
 
 To regenerate models and fixtures, use Python 3.11 with the CPU PyTorch wheel and
 [tools/requirements.txt](tools/requirements.txt). Install NumPy, Cython,

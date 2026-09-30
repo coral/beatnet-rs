@@ -21,6 +21,8 @@ rand = "0.9"
 rand_chacha = "0.9"
 thiserror = "2"
 cpal = { version = "0.18.2", optional = true }
+fearless_simd = "1.0"
+fearless_simd_macros = "0.1"
 
 [dev-dependencies]
 ctrlc = "3.5"

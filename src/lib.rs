@@ -223,25 +223,43 @@ impl<M: Inference> BeatNet<M> {
         // A backend or user callback can unwind after advancing only part of a chunk.
         // Stay failed unless the entire operation returns successfully.
         self.status = Status::Failed;
-        for &sample in pcm {
-            self.sum += sample as f64;
-            self.channel += 1;
-            if self.channel == self.config.channels as usize {
-                let mono = (self.sum / self.channel as f64) as f32;
-                self.sum = 0.;
-                self.channel = 0;
-                self.input_frames += 1;
-                self.push_mono(mono, &mut emit)?;
+        let channels = usize::from(self.config.channels);
+        if channels == 1 {
+            self.input_frames += pcm.len() as u64;
+            self.process_mono(pcm, &mut emit)?;
+        } else {
+            let mut mono = [0.; features::HOP];
+            for block in pcm.chunks(mono.len() * channels) {
+                let mut frames = 0;
+                for &sample in block {
+                    self.sum += f64::from(sample);
+                    self.channel += 1;
+                    if self.channel == channels {
+                        mono[frames] = (self.sum / channels as f64) as f32;
+                        frames += 1;
+                        self.sum = 0.;
+                        self.channel = 0;
+                    }
+                }
+                self.input_frames += frames as u64;
+                self.process_mono(&mono[..frames], &mut emit)?;
             }
         }
         self.status = Status::Active;
         Ok(())
     }
-    fn push_mono(&mut self, sample: f32, emit: &mut impl FnMut(FrameOutput)) -> Result<(), Error> {
+    fn process_mono(
+        &mut self,
+        samples: &[f32],
+        emit: &mut impl FnMut(FrameOutput),
+    ) -> Result<(), Error> {
         if let Some(converter) = &mut self.converter {
-            converter.push(sample, &mut self.engine, emit)
+            converter.process(samples, &mut self.engine, emit)
         } else {
-            self.engine.push(sample, emit)
+            for &sample in samples {
+                self.engine.push(sample, emit)?;
+            }
+            Ok(())
         }
     }
     /// Drain resampler and centered-window lookahead with zero padding. Emits only
@@ -261,7 +279,7 @@ impl<M: Inference> BeatNet<M> {
         self.status = Status::Failed;
         self.engine.frame_limit = Some(frames);
         while self.engine.frames < frames {
-            self.push_mono(0.0, &mut emit)?;
+            self.process_mono(&[0.0], &mut emit)?;
         }
         self.status = Status::Finished;
         Ok(())
